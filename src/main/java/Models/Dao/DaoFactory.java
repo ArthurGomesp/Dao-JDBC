@@ -7,6 +7,6 @@ import Models.Dao.SellerDao;
 public class DaoFactory {
 
     public static SellerDao createSellerDao() {
-        return new SellerDao(DB.getConnection());
+        return new SellerDaoJdbc();
     }
 }
