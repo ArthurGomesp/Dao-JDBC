@@ -1,14 +1,12 @@
 package Models.Impl;
 
+import DataBase.DB;
 import DataBase.Exception.DbException;
 import Models.Dao.SellerDao;
 import Models.Department;
 import Models.Seller;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +22,35 @@ public class SellerDaoJdbc implements SellerDao {
     }
     @Override
     public void insert(Seller obj) {
+        PreparedStatement st = null;
+        try{
+            st = conn.prepareStatement(
+                    "INSERT INTO seller " +
+                    "(Name, Email, BirthDate, BaseSalary, DepartmentId) " +
+                    "VALUES " +
+                   "(?, ?, ?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS
+            );
+            st.setString(1, obj.getName());
+            st.setString(2, obj.getEmail());
+            st.setDate(3, new java.sql.Date(obj.getBirthDate().getTime()));
+            st.setDouble(4, obj.getBaseSalary());
+            st.setInt(5,obj.getDepartment().getId());
+
+            int RowsAfected = st.executeUpdate();
+            if (RowsAfected > 0){
+                ResultSet rs = st.getGeneratedKeys();
+                if (rs.next()){
+                    int id = rs.getInt(1);
+                    obj.setId(id);
+                }
+            }else {
+                throw new DbException("Unexpected error, no rows afected!");
+            }
+
+        } catch (SQLException e) {
+            throw new DbException(e.getMessage());
+        }
 
     }
 
@@ -55,11 +82,14 @@ public class SellerDaoJdbc implements SellerDao {
             if(rs.next()){
                 Department dep = InstantiateDepartment(rs);
                 Seller obj = InstantiateSeller(rs, dep);
+                DB.closeResultSet(rs);
                 return  obj;
             }
             return null;
         } catch (SQLException e) {
             throw new DbException(e.getMessage());
+        }finally {
+            DB.closeStatement(st);
         }
 
     }
@@ -113,7 +143,7 @@ public class SellerDaoJdbc implements SellerDao {
             throw new DbException(e.getMessage());
         }
     }
-    
+
 
     @Override
     public List<Seller> findDepartment(Department department) {
